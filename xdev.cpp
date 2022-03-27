@@ -3,13 +3,15 @@
 #include <float.h>
 
 #define ADEV_MIN_SAMPLES 4
-#define DO_MDEV 1
+//#define DO_MDEV 1
+#define DO_ADEV 1
 
 xdev::xdev(QObject *parent)
     : QObject(parent),
     m_rate(1),
     m_overlap(false),
-    m_frequency(true)
+    m_frequency(true),
+    m_capLowConf(false)
 {
 }
 
@@ -26,6 +28,11 @@ void xdev::setOverlapMode(bool m)
 void xdev::setFrequencySeries(bool m)
 {
     m_frequency = m;
+}
+
+void xdev::setLowConfidenceCap(bool m)
+{
+    m_capLowConf = m;
 }
 
 void xdev::setSeries(QVector<double> &data)
@@ -93,9 +100,11 @@ xdev::valerr xdev::calc_xdev (long tau)
     }
     sum /= 2.0 * (double)tau * (double)tau;
 
-    /* don't output values with low confidence */
-    if ((double)n / (double)tau < 2.0)
-        return valerr{0.0, 0.0};
+    if (m_capLowConf == true) {
+        /* don't output values with low confidence */
+        if ((double)n / (double)tau < 2.0)
+            return valerr{0.0, 0.0};
+    }
 
     valerr result;
     result.val = sqrt(sum / n) / tau;
@@ -123,9 +132,15 @@ xdev::valerr xdev::calc_xdev(long tau)
     if (n < ADEV_MIN_SAMPLES)
         return valerr{0.0, 0.0};
 
+    if (m_capLowConf == true) {
+        /* don't output values with low confidence */
+        if ((double)n / (double)tau < 2.0)
+            return valerr{0.0, 0.0};
+    }
+
     valerr result;
     result.val = sqrt(sum / (double)n) / (double)tau;
-    result.err = result.val / sqrt((double)n);
+    result.err =result.val / abs(sqrt((double)n / (double)tau));
     return result;
 }
 #endif

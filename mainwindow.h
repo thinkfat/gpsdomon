@@ -37,6 +37,7 @@ public slots:
     void socketError(QAbstractSocket::SocketError);
     void reconnect();
     void adevResultAvailable();
+    void adev2ResultAvailable();
     void updateAdev();
     void displaySatInfo(QString);
     void requestSatInfo();
@@ -45,21 +46,32 @@ signals:
     void computeAdev();
 
 private:
+    // user interface
     Ui::MainWindow *ui;
+    // connection to GPSDO
+    GpsdoConnection *m_cnct;
 
-    QThread avarThread;
-    QVector<double> m_timeSeries;
     unsigned int m_numSamples;
 
-    GpsdoConnection *m_cnct;
+    // status charts
     HistoryChart *m_chart;
     HistoryChart *m_dacChart;
     HistoryChart *m_TempChart;
-    LogLogChart *m_adevChart;
 
+    // xDEV chart
+    QThread avarThread;
+    QVector<double> m_timeSeries;
+    LogLogChart *m_adevChart;
     xdev *m_xdev;
     bool m_avarRunning;
 
+    QThread avar2Thread;
+    QVector<double> m_time2Series;
+    LogLogChart *m_adev2Chart;
+    xdev *m_xdev2;
+    bool m_avar2Running;
+
+    // GNSS sky view
     QPolarChart *m_skyView;
     QScatterSeries *m_gpsSats;
     QScatterSeries *m_galileoSats;

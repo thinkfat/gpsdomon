@@ -55,9 +55,10 @@ void HistoryChart::findMaxAndTicks(double &min, double &max, int &ticks)
 
     double maxIn = max;
     double minIn = min;
-    double magnitude = floor(log10(range)-0.2);
-    if (magnitude < 0)
-        magnitude = 0;
+    double magnitude = floor(log10(range));
+
+    if (magnitude < -1)
+       magnitude = -1;
 
     double stride = pow(10, magnitude) / 2.0;
 
@@ -76,9 +77,9 @@ void HistoryChart::findMaxAndTicks(double &min, double &max, int &ticks)
             ++n;
         }
 
-        if (n > 10)
+        if (n > 8)
             stride = stride * 2;
-    } while (n > 10);
+    } while (n > 8);
 
     ticks = (max - min) / stride ;
 }
@@ -97,8 +98,8 @@ void HistoryChart::adjustAxisRanges()
     m_axisX->setTickCount(ticks);
 
     /* autorange y axis */
-    double minY = floor(m_minY);
-    double maxY = ceil(m_maxY);
+    double minY = m_minY; //floor(m_minY);
+    double maxY = m_maxY; //ceil(m_maxY);
 
     findMaxAndTicks(minY, maxY, ticks);
 

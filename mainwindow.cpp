@@ -7,8 +7,9 @@
 #include <QtCharts/QLogValueAxis>
 #include <QAreaSeries>
 
-#define DEFAULT_HISTORY (25000)
-#define DEFAULT_DAC_LSB (1000.0e-9 / 65536)
+#define DEFAULT_HISTORY (86400)
+//#define DEFAULT_HISTORY (7200)
+#define DEFAULT_DAC_LSB (320.0e-9 / 65536)
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
@@ -23,7 +24,7 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(m_cnct, SIGNAL(connected()), this, SLOT(connectionEstablished()));
     connect(m_cnct, SIGNAL(socketError(QAbstractSocket::SocketError)),
             this, SLOT(socketError(QAbstractSocket::SocketError)));
-    m_cnct->connectTo("192.168.2.136");
+    m_cnct->connectTo("192.168.2.192");
 
     // TIC chart
     m_chart = new HistoryChart();
@@ -68,7 +69,7 @@ MainWindow::MainWindow(QWidget *parent) :
     /* attach the adev computation thread */
     m_xdev = new xdev();
     m_xdev->setOverlapMode(true);
-    m_xdev->setFrequencySeries(true);
+    m_xdev->setFrequencySeries(false);
     m_xdev->moveToThread(&avarThread);
     connect(this, &MainWindow::computeAdev, m_xdev, &xdev::recompute);
     connect(m_xdev, &xdev::done, this, &MainWindow::adevResultAvailable);
@@ -95,6 +96,34 @@ MainWindow::MainWindow(QWidget *parent) :
     chartView->setRenderHint(QPainter::Antialiasing);
     chartView->setUpdatesEnabled(true);
 
+    /* second adev computation thread */
+    m_xdev2 = new xdev();
+    m_xdev2->setOverlapMode(true);
+    m_xdev2->setFrequencySeries(true);
+    m_xdev2->moveToThread(&avar2Thread);
+    connect(this, &MainWindow::computeAdev, m_xdev2, &xdev::recompute);
+    connect(m_xdev2, &xdev::done, this, &MainWindow::adev2ResultAvailable);
+    avar2Thread.start();
+
+    /* second adev chart */
+    m_adev2Chart = new LogLogChart();
+    QLineSeries *series2 = new QLineSeries;
+    m_adev2Chart->addSeries(series2);
+
+    QAreaSeries *aseries2 = new QAreaSeries(new QLineSeries, new QLineSeries);
+    aseries2->setPen(pen);
+    aseries2->setOpacity(0.2);
+    m_adev2Chart->addSeries(aseries2);
+
+    m_adev2Chart->legend()->hide();
+    m_adev2Chart->setTitle("DAC ADEV");
+
+    chartView = ui->adev2View;
+    chartView->setChart(m_adev2Chart);
+    chartView->setRenderHint(QPainter::Antialiasing);
+    chartView->setUpdatesEnabled(true);
+
+    /* sky view */
     m_skyView = new QPolarChart();
     m_skyView->setTitle("GNSS Constellations");
 
@@ -146,6 +175,10 @@ MainWindow::~MainWindow()
 {
     avarThread.quit();
     avarThread.wait();
+
+    avar2Thread.quit();
+    avar2Thread.wait();
+
     delete ui;
 }
 
@@ -158,7 +191,7 @@ void MainWindow::connectionEstablished()
 
 void MainWindow::reconnect()
 {
-    m_cnct->connectTo("192.168.2.136");
+    m_cnct->connectTo("192.168.2.192");
 }
 
 void MainWindow::socketError(QAbstractSocket::SocketError se)
@@ -192,9 +225,7 @@ void MainWindow::newData(QString data)
     v.append(values[0].toDouble());
     v.append(values[4].toDouble());
     m_chart->addValue(v);
-#if 0
-    m_timeSeries.append(v[1] * 1.0e-9);
-#endif
+    m_timeSeries.append(v[0] * 1.0e-9);
     v.clear();
 
     v.append(values[2].toDouble());
@@ -202,16 +233,17 @@ void MainWindow::newData(QString data)
     v.append(values[5].toDouble());
     m_dacChart->addValue(v);
 
-#if 1
     // feed adev with scaled dac values
-    m_timeSeries.append(v[2] * DEFAULT_DAC_LSB);
-#endif
+    m_time2Series.append(v[0] * DEFAULT_DAC_LSB);
 
     if (m_timeSeries.size() > DEFAULT_HISTORY)
         m_timeSeries.removeFirst();
+    if (m_time2Series.size() > DEFAULT_HISTORY)
+        m_time2Series.removeFirst();
 
-    if (!m_avarRunning) {
+    if (!m_avarRunning && !m_avar2Running) {
         m_avarRunning = true;
+        m_avar2Running = true;
         QTimer::singleShot(5000, this, &MainWindow::updateAdev);
     }
 
@@ -223,6 +255,7 @@ void MainWindow::newData(QString data)
 void MainWindow::updateAdev()
 {
     m_xdev->setSeries(m_timeSeries);
+    m_xdev2->setSeries(m_time2Series);
     emit computeAdev();
 }
 
@@ -236,14 +269,38 @@ void MainWindow::adevResultAvailable()
 
     while (it != adevVals.end()) {
         adevPoints.append(QPointF(it->tau, it->sigma));
-        aerrUpperPoints.append(QPointF(it->tau, it->sigma + it->err));
-        aerrLowerPoints.append(QPointF(it->tau, it->sigma - it->err));
+        if (it->sigma > 1.1 * it->err) {
+            aerrUpperPoints.append(QPointF(it->tau, it->sigma + it->err));
+            aerrLowerPoints.append(QPointF(it->tau, it->sigma - it->err));
+        }
         ++it;
     }
 
     m_adevChart->setData(adevPoints);
     m_adevChart->setData(aerrUpperPoints, aerrLowerPoints);
     m_avarRunning = false;
+}
+
+void MainWindow::adev2ResultAvailable()
+{
+    QVector<QPointF> adevPoints;
+    QVector<QPointF> aerrUpperPoints;
+    QVector<QPointF> aerrLowerPoints;
+    const QVector<xdev::tausigma> &adevVals = m_xdev2->adevVals();
+    QVector<xdev::tausigma>::const_iterator it = adevVals.begin();
+
+    while (it != adevVals.end()) {
+        adevPoints.append(QPointF(it->tau, it->sigma));
+        if (it->sigma > 1.1 * it->err) {
+            aerrUpperPoints.append(QPointF(it->tau, it->sigma + it->err));
+            aerrLowerPoints.append(QPointF(it->tau, it->sigma - it->err));
+        }
+        ++it;
+    }
+
+    m_adev2Chart->setData(adevPoints);
+    m_adev2Chart->setData(aerrUpperPoints, aerrLowerPoints);
+    m_avar2Running = false;
 }
 
 void MainWindow::requestSatInfo()

@@ -23,6 +23,7 @@ public:
     void addSeries(QXYSeries*);
     void addValue(QVector<double>&);
     void addValue(double);
+    void addPoint(QPointF p);
     void setHistoryLength(int);
     QValueAxis *axisX();
     QValueAxis *axisY();
