@@ -7,8 +7,9 @@
 #include <QtCharts/QLogValueAxis>
 #include <QAreaSeries>
 
-#define DEFAULT_HISTORY (25000)
-#define DEFAULT_DAC_LSB (1000.0e-9 / 65536)
+#define DEFAULT_HISTORY (86400)
+//#define DEFAULT_HISTORY (7200)
+#define DEFAULT_DAC_LSB (400.0e-9 / 65536)
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
@@ -23,7 +24,7 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(m_cnct, SIGNAL(connected()), this, SLOT(connectionEstablished()));
     connect(m_cnct, SIGNAL(socketError(QAbstractSocket::SocketError)),
             this, SLOT(socketError(QAbstractSocket::SocketError)));
-    m_cnct->connectTo("192.168.2.136");
+    m_cnct->connectTo("192.168.2.192");
 
     // TIC chart
     m_chart = new HistoryChart();
@@ -68,7 +69,7 @@ MainWindow::MainWindow(QWidget *parent) :
     /* attach the adev computation thread */
     m_xdev = new xdev();
     m_xdev->setOverlapMode(true);
-    m_xdev->setFrequencySeries(true);
+    m_xdev->setFrequencySeries(false);
     m_xdev->moveToThread(&avarThread);
     connect(this, &MainWindow::computeAdev, m_xdev, &xdev::recompute);
     connect(m_xdev, &xdev::done, this, &MainWindow::adevResultAvailable);
@@ -192,8 +193,8 @@ void MainWindow::newData(QString data)
     v.append(values[0].toDouble());
     v.append(values[4].toDouble());
     m_chart->addValue(v);
-#if 0
-    m_timeSeries.append(v[1] * 1.0e-9);
+#if 1
+    m_timeSeries.append(v[0] * 1.0e-9);
 #endif
     v.clear();
 
@@ -202,9 +203,9 @@ void MainWindow::newData(QString data)
     v.append(values[5].toDouble());
     m_dacChart->addValue(v);
 
-#if 1
+#if 0
     // feed adev with scaled dac values
-    m_timeSeries.append(v[2] * DEFAULT_DAC_LSB);
+    m_timeSeries.append(v[1] * DEFAULT_DAC_LSB);
 #endif
 
     if (m_timeSeries.size() > DEFAULT_HISTORY)

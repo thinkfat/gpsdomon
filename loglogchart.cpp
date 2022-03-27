@@ -9,12 +9,12 @@ LogLogChart::LogLogChart(QGraphicsItem *parent, Qt::WindowFlags wFlags)
 {
     m_axisX->setRange(1, 10);
     m_axisX->setLabelFormat("%g");
-    m_axisX->setMinorTickCount(-1);
+    m_axisX->setMinorTickCount(4);
     m_axisX->setBase(10.0);
 
     m_axisY->setRange(1, 10);
     m_axisY->setLabelFormat("%g");
-    m_axisY->setMinorTickCount(-1);
+    m_axisY->setMinorTickCount(4);
     m_axisY->setBase(10.0);
 
     addAxis(m_axisX, Qt::AlignBottom);

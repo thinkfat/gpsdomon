@@ -45,21 +45,26 @@ signals:
     void computeAdev();
 
 private:
+    // user interface
     Ui::MainWindow *ui;
+    // connection to GPSDO
+    GpsdoConnection *m_cnct;
 
-    QThread avarThread;
-    QVector<double> m_timeSeries;
     unsigned int m_numSamples;
 
-    GpsdoConnection *m_cnct;
+    // status charts
     HistoryChart *m_chart;
     HistoryChart *m_dacChart;
     HistoryChart *m_TempChart;
-    LogLogChart *m_adevChart;
 
+    // xDEV chart
+    QThread avarThread;
+    QVector<double> m_timeSeries;
+    LogLogChart *m_adevChart;
     xdev *m_xdev;
     bool m_avarRunning;
 
+    // GNSS sky view
     QPolarChart *m_skyView;
     QScatterSeries *m_gpsSats;
     QScatterSeries *m_galileoSats;
