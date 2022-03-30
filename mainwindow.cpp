@@ -237,8 +237,10 @@ void MainWindow::adevResultAvailable()
 
     while (it != adevVals.end()) {
         adevPoints.append(QPointF(it->tau, it->sigma));
-        aerrUpperPoints.append(QPointF(it->tau, it->sigma + it->err));
-        aerrLowerPoints.append(QPointF(it->tau, it->sigma - it->err));
+        if (it->sigma > 1.1 * it->err) {
+            aerrUpperPoints.append(QPointF(it->tau, it->sigma + it->err));
+            aerrLowerPoints.append(QPointF(it->tau, it->sigma - it->err));
+        }
         ++it;
     }
 

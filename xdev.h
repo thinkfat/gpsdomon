@@ -26,6 +26,7 @@ public:
 
     void setOverlapMode(bool);
     void setFrequencySeries(bool);
+    void setLowConfidenceCap(bool);
 
 public slots:
     void recompute();
@@ -50,6 +51,7 @@ private:
 
     bool m_overlap;
     bool m_frequency;
+    bool m_capLowConf;
 };
 
 #endif // AVAR_H
