@@ -37,6 +37,7 @@ public slots:
     void socketError(QAbstractSocket::SocketError);
     void reconnect();
     void adevResultAvailable();
+    void adev2ResultAvailable();
     void updateAdev();
     void displaySatInfo(QString);
     void requestSatInfo();
@@ -63,6 +64,12 @@ private:
     LogLogChart *m_adevChart;
     xdev *m_xdev;
     bool m_avarRunning;
+
+    QThread avar2Thread;
+    QVector<double> m_time2Series;
+    LogLogChart *m_adev2Chart;
+    xdev *m_xdev2;
+    bool m_avar2Running;
 
     // GNSS sky view
     QPolarChart *m_skyView;
