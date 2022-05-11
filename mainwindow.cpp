@@ -7,8 +7,7 @@
 #include <QtCharts/QLogValueAxis>
 #include <QAreaSeries>
 
-#define DEFAULT_HISTORY (86400)
-//#define DEFAULT_HISTORY (7200)
+#define DEFAULT_HISTORY (9999)
 #define DEFAULT_DAC_LSB (320.0e-9 / 65536)
 
 MainWindow::MainWindow(QWidget *parent) :
@@ -89,7 +88,7 @@ MainWindow::MainWindow(QWidget *parent) :
     m_adevChart->addSeries(aseries);
 
     m_adevChart->legend()->hide();
-    m_adevChart->setTitle("TIC MDEV");
+    m_adevChart->setTitle("TIC ADEV");
 
     chartView = ui->adevView;
     chartView->setChart(m_adevChart);
@@ -142,6 +141,13 @@ MainWindow::MainWindow(QWidget *parent) :
     radialAxis->setReverse(true);
     m_skyView->addAxis(radialAxis, QPolarChart::PolarOrientationRadial);
 
+    m_unusedSats = new QScatterSeries;
+    m_skyView->addSeries(m_unusedSats);
+    m_unusedSats->attachAxis(angularAxis);
+    m_unusedSats->attachAxis(radialAxis);
+    m_unusedSats->setName("Unused");
+    m_unusedSats->setColor(QColor::fromRgb(0,0,0,20));
+
     m_gpsSats = new QScatterSeries;
     m_skyView->addSeries(m_gpsSats);
     m_gpsSats->attachAxis(angularAxis);
@@ -153,12 +159,6 @@ MainWindow::MainWindow(QWidget *parent) :
     m_galileoSats->attachAxis(angularAxis);
     m_galileoSats->attachAxis(radialAxis);
     m_galileoSats->setName("Galileo");
-
-    m_unusedSats = new QScatterSeries;
-    m_skyView->addSeries(m_unusedSats);
-    m_unusedSats->attachAxis(angularAxis);
-    m_unusedSats->attachAxis(radialAxis);
-    m_unusedSats->setName("Unused");
 
     chartView = ui->gnssView;
     chartView->setChart(m_skyView);
@@ -215,11 +215,16 @@ void MainWindow::newData(QString data)
         return;
     }
 
-    QStringList values = data.trimmed().split(",", QString::SkipEmptyParts);
+    QStringList values = data.trimmed().split(",", Qt::SkipEmptyParts);
 
+    if (values.size() < 9)
+        return;
+
+#if 0
     // skip warmup and initial phase search
     if (values[8].toInt() > 3)
         return;
+#endif
 
     QVector<double> v;
     v.append(values[0].toDouble());

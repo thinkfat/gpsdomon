@@ -13,7 +13,7 @@ HistoryChart::HistoryChart(QGraphicsItem *parent, Qt::WindowFlags wFlags)
       m_maxY(0.0)
 {
     m_axisX->setTickCount(10);
-    m_axisY->setTickCount(10);
+    m_axisY->setTickCount(9);
     m_axisY->setRange(-10, 10);
 
     addAxis(m_axisX, Qt::AlignBottom);
